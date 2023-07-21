@@ -28,18 +28,28 @@ class DSS_Engine:
 
         return selected_row['Value'], selected_row['Unit']
 
-    def history_retrival(self, loinc, first_name, last_name, component_date, component_time, from_date, from_time,
-                         to_date, to_time):
-        # Filter the data by the dates
-        start = f'{from_date} {from_time}'
-        end = f'{to_date} {to_time}'
-        rel_db = self.db.loc[start:end]  # Relevant Database
+    def history_retrival(self, loinc, first_name, last_name, from_date, from_time, to_date, trans_date, to_time=None, trans_time=None):
+        target_date = pd.to_datetime(trans_date).date()
+        start = pd.to_datetime(f'{from_date} {from_time}')
+        end = pd.to_datetime(to_date).date()
 
         # Filter according to the conditions
-        conditions = (rel_db['First name'] == first_name) & (rel_db['Last name'] == last_name) & \
-                     (rel_db['LOINC-NUM'] == loinc)
-        filtered_df = rel_db[conditions]
-        return filtered_df
+        conditions = (self.db['First name'] == first_name) & (self.db['Last name'] == last_name) & \
+                     (self.db['LOINC-NUM'] == loinc) & (self.db['Transaction time'].dt.date == target_date) & \
+                     (self.db['Valid start time'].dt >= start) & (self.db['Valid stop time'].dt.date <= end)
+        filtered_df = self.db[conditions]
+
+        if trans_time:
+            full_date = pd.to_datetime(f'{trans_date} {trans_time}')
+            selected_row = filtered_df[filtered_df['Transaction time'] == full_date]
+        else:
+            selected_row = filtered_df
+
+        if to_time:
+            full_end_time = pd.to_datetime(f'{to_date} {to_time}')
+            selected_row = filtered_df[filtered_df['Valid stop time'] <= full_end_time]
+
+        return selected_row
 
     def update(self, loinc, first_name, last_name, trans_date, trans_time, component_date, component_time, new_value):
         # Filter according to the conditions
@@ -80,6 +90,11 @@ class DSS_Engine:
 
         return selected_row
 
+    def get_patient_data(self):
+        group_df = self.db.groupby(['ID', 'LOINC-NUM'])
+        last_patient_data = group_df.apply(lambda x: x.sort_values("Valid start time", ascending=False).head(1))
+        return last_patient_data
+
     def save_db(self, db_path):
         if self.db_to_save:
             self.db_to_save.to_csv(db_path)
@@ -90,11 +105,12 @@ df = pd.read_csv(db_path,
                  parse_dates=['Valid start time', 'Valid stop time', 'Transaction time', 'Transaction stop time'])
 dss = DSS_Engine(db=df)
 
-dss.retrieval(loinc='14743-9',
-              first_name='Yonathan',
-              last_name='Spoon',
-              current_date='2018-5-22', current_time='11:00',
-              component_date='2018-5-17', component_time='19:00')
+dss.get_patient_data()
+# dss.retrieval(loinc='14743-9',
+#               first_name='Yonathan',
+#               last_name='Spoon',
+#               current_date='2018-5-22', current_time='11:00',
+#               component_date='2018-5-17', component_time='19:00')
 
 # dss.delete(loinc='14743-9',
 #            first_name='Yonathan',
