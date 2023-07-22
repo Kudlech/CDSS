@@ -36,7 +36,7 @@ class DSS_Engine:
         # Filter according to the conditions
         conditions = (self.db['First name'] == first_name) & (self.db['Last name'] == last_name) & \
                      (self.db['LOINC-NUM'] == loinc) & (self.db['Transaction time'].dt.date == target_date) & \
-                     (self.db['Valid start time'].dt >= start) & (self.db['Valid stop time'].dt.date <= end)
+                     (self.db['Valid start time'].dt >= start) & (self.db['Valid start time'].dt.date <= end)
         filtered_df = self.db[conditions]
 
         if trans_time:
@@ -47,7 +47,7 @@ class DSS_Engine:
 
         if to_time:
             full_end_time = pd.to_datetime(f'{to_date} {to_time}')
-            selected_row = filtered_df[filtered_df['Valid stop time'] <= full_end_time]
+            selected_row = filtered_df[filtered_df['Valid start time'] <= full_end_time]
 
         return selected_row
 
