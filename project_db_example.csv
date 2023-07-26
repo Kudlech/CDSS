@@ -1,0 +1,8 @@
+﻿ID,First name,Last name,LOINC-NUM,Value,Unit,Transaction time,Valid start time,Valid stop time,Transaction stop time
+1,Avraham,Avraham,30313-1,8.5,gr/dl,22/05/2018 10:00,21/05/2018 15:00,,
+1,Avraham,Avraham,11218-5,3000,cells/ml,22/05/2018 10:00,21/05/2018 15:00,,
+1,Avraham,Avraham,39106-0,37.3,degrees-celsious,22/05/2018 10:00,21/05/2018 15:00,,
+1,Avraham,Avraham,70423-9,None,none,22/05/2018 10:00,21/05/2018 15:00,,
+1,Avraham,Avraham,39107-8,Erythema,none,22/05/2018 10:00,21/05/2018 15:00,,
+1,Avraham,Avraham,00000-0,Edema,none,22/05/2018 10:00,21/05/2018 15:00,,
+1,Avraham,Avraham,Gender,male,none,22/05/1992 11:00,21/05/1992 15:00,,

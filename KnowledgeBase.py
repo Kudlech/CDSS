@@ -36,35 +36,47 @@ class KB_Dec:
 		Returns:
 			df_inferred: dataframe of inferred knowledge
 		"""
-		joined_1_1 = pd.merge(df_db, self.df_map_1_1, left_on='Condition', right_on='LOINC_Code', how='inner', suffixes=('_db', '_kb'))
-		joined_1_1 = joined_1_1[joined_1_1.value_db.between(joined_1_1.scale_low, joined_1_1.scale_top)][['Therapy_Code', 'value_kb']]
+		df_db['Value'] = pd.to_numeric(df_db['Value'],errors='coerce').fillna(df_db['Value']).tolist()
+		joined_1_1 = pd.merge(df_db, self.df_map_1_1, left_on='LOINC-NUM', right_on='LOINC-NUM', how='inner', suffixes=('_db', '_kb'))
+		joined_1_1 = joined_1_1[joined_1_1.Value_db.between(joined_1_1.scale_low, joined_1_1.scale_top)][['Therapy_Code', 'Value_kb']]
 
-		joined_2_1 = pd.merge(pd.merge(self.df_map_2_1, df_db, right_on='Condition', left_on='LOINC_Code_1', how='inner', suffixes=('_kb', '_db_1'), ), 
-						df_db, right_on='Condition', left_on='LOINC_Code_2', how='inner', suffixes=('_db_1', '_db_2')).rename(columns={'value': 'value_db_2'})
-		joined_2_1 = joined_2_1[joined_2_1.value_db_1.between(joined_2_1.scale_low_1, joined_2_1.scale_top_1) & joined_2_1.value_db_2.between(joined_2_1.scale_low_2, joined_2_1.scale_top_2)][['Therapy_Code', 'value_kb']]
+		joined_2_1 = pd.merge(pd.merge(self.df_map_2_1, df_db, right_on='LOINC-NUM', left_on='LOINC-NUM_1', how='inner', suffixes=('_kb', '_db_1'), ), 
+						df_db, right_on='LOINC-NUM', left_on='LOINC-NUM_2', how='inner', suffixes=('_db_1', '_db_2')).rename(columns={'Value': 'Value_db_2'})
+		joined_2_1 = joined_2_1[joined_2_1.Value_db_1.between(joined_2_1.scale_low_1, joined_2_1.scale_top_1) & 
+			  					joined_2_1.Value_db_2.between(joined_2_1.scale_low_2, joined_2_1.scale_top_2)][['Therapy_Code', 'Value_kb']]
 
-		joined_max_or = pd.merge(df_db, self.df_map_max_or, left_on='Condition', right_on='LOINC_Code', how='inner', suffixes=('_db', '_kb'))
-		joined_max_or = joined_max_or[joined_max_or.value_db.between(joined_max_or.scale_low, joined_max_or.scale_top)]
-		joined_max_or = joined_max_or.groupby('Therapy_Code')['value_kb'].max().to_frame().reset_index()
+		joined_max_or = pd.merge(df_db, self.df_map_max_or, left_on='LOINC-NUM', right_on='LOINC-NUM', how='inner', suffixes=('_db', '_kb'))
+		joined_max_or = joined_max_or[joined_max_or.Value_db.between(joined_max_or.scale_low, joined_max_or.scale_top)]
+		joined_max_or = joined_max_or.groupby('Therapy_Code')['Value_kb'].max().to_frame().reset_index()
 
-		joined_all = pd.concat([joined_1_1, joined_2_1, joined_max_or]).reset_index(drop=True).rename(columns={'Therapy_Code': 'Condition', 'value_kb': 'value'})
+		joined_all = pd.concat([joined_1_1, joined_2_1, joined_max_or]).reset_index(drop=True).rename(columns={'Therapy_Code': 'LOINC-NUM', 'Value_kb': 'Value'})
 
 		return pd.concat([df_db, joined_all], ignore_index=True)
 	
+	def get_best_before(self, df_db:pd.DataFrame) -> pd.DataFrame:
+		"""
+		Get the best before date of the database.
+		Args:
+			df_db (pd.DataFrame): dataframe of the database
+		Returns:
+			pd.DataFrame: dataframe with the best before date
+		"""
+		return pd.merge(df_db, self.df_best_before, left_on='LOINC-NUM', right_on='LOINC-NUM', how='left', suffixes=('_db', '_kb'))
+	
 
-class KB_Prod:
+class KB_Proc:
 	def __init__(self, path:typing.Union[str, bytes, os.PathLike]=None) -> None:
 		if path is not None:
-			self.load_kb_prod(path)
+			self.load_kb_proc(path)
 		else:
 			self.df_map_treatments = pd.DataFrame()
 			self.df_map_protocol = pd.DataFrame()
 	
-	def load_kb_prod(self, path:typing.Union[str, bytes, os.PathLike]) -> None:
+	def load_kb_proc(self, path:typing.Union[str, bytes, os.PathLike]) -> None:
 		"""
 		Load the Procedural knowledge base.
 		Example:
-			df_map_treatments, df_map_protocol = load_kb_prod()
+			df_map_treatments, df_map_protocol = load_kb_proc()
 		Returns:
 			df_map_treatments: dataframe of treatments
 			df_map_protocol: dataframe of protocol actions
@@ -72,7 +84,7 @@ class KB_Prod:
 		self.df_map_treatments = pd.read_excel(path, sheet_name='treatments')
 		self.df_map_protocol = pd.read_excel(path, sheet_name='protocol_actions')
 	
-	def inference_prod(self, df_db_inf:pd.DataFrame) -> pd.Index:
+	def inference_proc(self, df_db_inf:pd.DataFrame) -> pd.Index:
 		"""
 		Perform inference on the Procedural knowledge base.
 		Args:
@@ -80,8 +92,8 @@ class KB_Prod:
 		Returns:
 			pd.Index: protocol codes that are inferred
 		"""
-		df_treat_inf = pd.merge(self.df_map_treatments, df_db_inf, left_on=['Therapy_Code', 'Therapy_value'], right_on=['Condition', 'value'], how='left')
-		df_treat_inf['bool'] = df_treat_inf['value'].notnull()
+		df_treat_inf = pd.merge(self.df_map_treatments, df_db_inf, left_on=['Therapy_Code', 'Therapy_Value'], right_on=['LOINC-NUM', 'Value'], how='left')
+		df_treat_inf['bool'] = df_treat_inf['Value'].notnull()
 		df_treat_inf = df_treat_inf.groupby('protocol_code')['bool'].all()
 		df_treat_inf = df_treat_inf[df_treat_inf].index
 		return df_treat_inf
@@ -103,9 +115,9 @@ class KB:
 		else:
 			self.kb_dec = KB_Dec()
 		if path_prod is not None:
-			self.kb_prod = KB_Prod(path_prod)
+			self.kb_proc = KB_Proc(path_prod)
 		else:
-			self.kb_prod = KB_Prod()
+			self.kb_proc = KB_Proc()
 	
 	def inference_protocol(self, df_db:pd.DataFrame) -> pd.DataFrame:
 		"""
@@ -116,6 +128,6 @@ class KB:
 			pd.DataFrame: dataframe of the inferred protocol actions
 		"""
 		df_db_inf = self.kb_dec.inference_dec(df_db)
-		protocol_code = self.kb_prod.inference_prod(df_db_inf)
-		df_protocol = self.kb_prod.get_protocol(protocol_code)
+		protocol_code = self.kb_proc.inference_proc(df_db_inf)
+		df_protocol = self.kb_proc.get_protocol(protocol_code)
 		return df_protocol
