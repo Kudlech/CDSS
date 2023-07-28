@@ -12,6 +12,8 @@ class KB_Dec:
 			self.df_map_2_1 = pd.DataFrame()
 			self.df_map_max_or = pd.DataFrame()
 			self.df_best_before = pd.DataFrame()
+			self.df_loinc = pd.DataFrame()
+			self.df_states = pd.DataFrame()
 	
 	def load_kb_dec(self, path:typing.Union[str, bytes, os.PathLike]) -> None:
 		"""
@@ -25,6 +27,10 @@ class KB_Dec:
 
 		self.df_map_max_or = pd.read_excel(path, sheet_name='maximal_or', keep_default_na=False)
 		self.df_map_max_or['scale_top'] = self.df_map_max_or.scale_top.where(self.df_map_max_or.scale_top != 'inf', np.inf) # replace 'inf' with np.inf
+
+		self.df_loinc = pd.read_excel(path, sheet_name='LOINC')
+
+		self.df_states = pd.read_excel(path, sheet_name='states')
 
 	def inference_dec(self, df_db: pd.DataFrame) -> pd.DataFrame:
 		"""
@@ -53,15 +59,54 @@ class KB_Dec:
 
 		return pd.concat([df_db, joined_all], ignore_index=True)
 	
-	def get_best_before(self, df_db:pd.DataFrame) -> pd.DataFrame:
+	def get_best_before(self, loinc_num:str) -> (pd.Timedelta, pd.Timedelta):
 		"""
 		Get the best before date of the database.
 		Args:
-			df_db (pd.DataFrame): dataframe of the database
+			loinc_num (str): LOINC-NUM
 		Returns:
-			pd.DataFrame: dataframe with the best before date
+			pd.Timedelta: Timedelta with the best before date
+			pd.Timedelta: Timedelta with the best after date
 		"""
-		return pd.merge(df_db, self.df_best_before, left_on='LOINC-NUM', right_on='LOINC-NUM', how='left', suffixes=('_db', '_kb'))
+		df = self.df_best_before[self.df_best_before['LOINC-NUM'] == loinc_num]
+		return pd.Timedelta(f"{df['good_before_value'].item()} {df['good_before_time_unit'].item()}"), pd.Timedelta(f"{df['good_after_value'].item()} {df['good_after_time_unit'].item()}")
+	
+	def get_loinc_desc(self, loinc_num:str) -> str:
+		"""
+		Get the LOINC description.
+		Args:
+			loinc_num (str): LOINC-NUM
+
+		Returns:
+			str: LOINC description
+		"""
+		return self.df_loinc[self.df_loinc['LOINC-NUM'] == loinc_num]['LONG_COMMON_NAME'].item()
+	
+	def get_full_loinc_desc(self) -> pd.DataFrame:
+		"""
+		Get the full LOINC description.
+		Returns:
+			pd.DataFrame: dataframe of LOINC description
+		"""
+		return self.df_loinc[['LOINC-NUM', 'LONG_COMMON_NAME']]
+	
+	def get_full_states(self) -> pd.DataFrame:
+		"""
+		Get the full states.
+		Returns:
+			pd.DataFrame: dataframe of states
+		"""
+		return self.df_states
+	
+	def get_states(self, therapy_code:str) -> pd.DataFrame:
+		"""
+		Get the states of the Therapy_Code.
+		Args:
+			therapy_code (str): Therapy_Code
+		Returns:
+			pd.DataFrame: dataframe of states
+		"""
+		return self.df_states[self.df_states['Therapy_Code'] == therapy_code]
 	
 
 class KB_Proc:
