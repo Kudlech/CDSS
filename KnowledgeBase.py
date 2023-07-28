@@ -98,15 +98,15 @@ class KB_Dec:
 		"""
 		return self.df_states
 	
-	def get_states(self, therapy_code:str) -> pd.DataFrame:
+	def get_states(self, therapy_code:str) -> str:
 		"""
 		Get the states of the Therapy_Code.
 		Args:
 			therapy_code (str): Therapy_Code
 		Returns:
-			pd.DataFrame: dataframe of states
+			str: state description
 		"""
-		return self.df_states[self.df_states['Therapy_Code'] == therapy_code]
+		return self.df_states[self.df_states['Therapy_Code'] == therapy_code]['Therapy_desc'].item()
 	
 
 class KB_Proc:
