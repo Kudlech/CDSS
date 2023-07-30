@@ -14,6 +14,7 @@ class KB_Dec:
 			self.df_best_before = pd.DataFrame()
 			self.df_loinc = pd.DataFrame()
 			self.df_states = pd.DataFrame()
+			self.df_filter_condition = pd.DataFrame()
 	
 	def load_kb_dec(self, path:typing.Union[str, bytes, os.PathLike]) -> None:
 		"""
@@ -31,6 +32,9 @@ class KB_Dec:
 		self.df_loinc = pd.read_excel(path, sheet_name='LOINC')
 
 		self.df_states = pd.read_excel(path, sheet_name='states')
+
+		self.df_filter_condition = pd.read_excel(path, sheet_name='filter_condition')
+
 
 	def inference_dec(self, df_db: pd.DataFrame) -> pd.DataFrame:
 		"""
@@ -55,9 +59,16 @@ class KB_Dec:
 		joined_max_or = joined_max_or[joined_max_or.Value_db.between(joined_max_or.scale_low, joined_max_or.scale_top)]
 		joined_max_or = joined_max_or.groupby('Therapy_Code')['Value_kb'].max().to_frame().reset_index()
 
-		joined_all = pd.concat([joined_1_1, joined_2_1, joined_max_or]).reset_index(drop=True).rename(columns={'Therapy_Code': 'LOINC-NUM', 'Value_kb': 'Value'})
+		joined_all = pd.concat([joined_1_1, joined_2_1, joined_max_or]).reset_index(drop=True)
 
-		return pd.concat([df_db, joined_all], ignore_index=True)
+		df_db['dummy'] = 1
+		filter = pd.merge(df_db, self.df_filter_condition, how='outer', on=['LOINC-NUM', 'Value'])
+		filter = filter[filter['dummy'].isnull()]
+		df_db = df_db.drop(columns=['dummy'])
+
+		joined_all = joined_all[~joined_all['Therapy_Code'].isin(filter['Therapy_Code'])]
+
+		return joined_all.rename(columns={'Value_kb': 'Value'})
 	
 	def get_best_before(self, loinc_num:str) -> (pd.Timedelta, pd.Timedelta):
 		"""
@@ -137,7 +148,7 @@ class KB_Proc:
 		Returns:
 			pd.Index: protocol codes that are inferred
 		"""
-		df_treat_inf = pd.merge(self.df_map_treatments, df_db_inf, left_on=['Therapy_Code', 'Therapy_Value'], right_on=['LOINC-NUM', 'Value'], how='left')
+		df_treat_inf = pd.merge(self.df_map_treatments, df_db_inf, left_on=['Therapy_Code', 'Therapy_Value'], right_on=['Therapy_Code', 'Value'], how='left')
 		df_treat_inf['bool'] = df_treat_inf['Value'].notnull()
 		df_treat_inf = df_treat_inf.groupby('protocol_code')['bool'].all()
 		df_treat_inf = df_treat_inf[df_treat_inf].index
