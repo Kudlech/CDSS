@@ -7,6 +7,7 @@ import streamlit as st
 from dss_engine import DSS_Engine
 from KnowledgeBase import KB
 
+
 class UI():
     def __init__(self, db_path='project_db.csv', debug_mode=False) -> None:
         self.debug_mode = debug_mode
@@ -25,11 +26,13 @@ class UI():
         self.cds = DSS_Engine(db=df.copy())
         del(df)
 
+        self.state_code_to_name = dict(pd.read_excel('state_code_to_name.xlsx').values)
+
         # [UI] create transaction (current) time picker
-        _, _, self.col_transaction_date_picker, self.col_transaction_time_picker = st.columns(4)  
+        self.col_transaction_date_picker, self.col_transaction_time_picker, _, _  = st.columns(4)  
         with self.col_transaction_date_picker:
             self.date_current = st.date_input(
-                "Current date: ",
+                "📅 Current date: ",
                 (datetime.date(
                 day=self.cds.db['Transaction time'].max().day, 
                 month=self.cds.db['Transaction time'].max().month, 
@@ -39,7 +42,7 @@ class UI():
             if self.debug_mode: st.write(self.date_current)
 
         with self.col_transaction_time_picker:
-            self.time_current = st.time_input('Current time:  ', datetime.time(
+            self.time_current = st.time_input('🕒 Current time:  ', datetime.time(
                 hour=self.cds.db['Transaction time'].max().hour, 
                 minute=self.cds.db['Transaction time'].max().minute
                 ),
@@ -49,8 +52,8 @@ class UI():
 
         # [UI] create sidebar
         self.page_names_to_funcs = {
-            "Monitor": self.page_home,
-            "Actions": self.page_tabs,
+            "🖥️ Monitor": self.page_home,
+            "📝 Actions": self.page_tabs,
         }        
 
         demo_name = st.sidebar.radio("Choose a page", self.page_names_to_funcs.keys())
@@ -62,28 +65,96 @@ class UI():
         patient_full_name_list = list(_df.drop_duplicates(['ID', 'First name', 'Last name'])['Full name'])
 
         no_patient_selected_placeholder_str = '---'
-        selected_patient = st.selectbox('Patient name:    ', [no_patient_selected_placeholder_str] + patient_full_name_list)
-        
-        patient_data = self.cds.get_patient_data(trans_date=f'{self.date_current}', trans_time=f'{self.time_current.hour}:{self.time_current.minute}')
-        df_treatments = self.cds.get_states(trans_date=f'{self.date_current}', trans_time=f'{self.time_current.hour}:{self.time_current.minute}').reset_index()
+        col_patient_selction, col_state_display, _ = st.columns([1,1,4])
 
+        with col_patient_selction:        
+            selected_patient = st.selectbox('Patient name:    ', [no_patient_selected_placeholder_str] + patient_full_name_list)
+
+        
+        trans_date=f'{self.date_current}'
+        trans_time=f'{self.time_current.hour}:{self.time_current.minute}'
+        patient_data = self.cds.get_patient_data(trans_date=trans_date, trans_time=trans_time)
+        
+        # st.dataframe(patient_data)
+        df_treatments = self.cds.get_states(trans_date=trans_date, trans_time=trans_time).reset_index()
+        # st.dataframe(df_treatments)
         if selected_patient == no_patient_selected_placeholder_str:
-            st.write('Treatments:')
-            st.dataframe(df_treatments, hide_index=True)
-            st.write('Patient history:')
-            st.dataframe(patient_data[~patient_data['LOINC-NUM'].eq('Gender')], hide_index=True)
+
+            for patient_full_name in patient_full_name_list:
+                # st.write('🌡️ **Patient states:**')
+                patient_id = list(set(_df[_df['Full name'].eq(patient_full_name)]['ID']))[0]
+                df_db_inf = self.cds.kb.kb_dec.inference_dec(patient_data[patient_data.ID.eq(patient_id)][['LOINC-NUM', 'Value']])
+                df_db_inf['State type'] = df_db_inf.Therapy_Code.apply(lambda x: self.cds.kb.kb_dec.get_states(x))
+                df_db_inf['Value'] = df_db_inf.Value.map(self.state_code_to_name)
+                for state_type in set(df_db_inf['State type']):
+                    try:
+                        state_value = list(df_db_inf[df_db_inf['State type'].eq(state_type)]['Value'])[0]
+                        
+                    except:
+                        state_value = None
+                    patient_data.loc[patient_data.ID.eq(patient_id), state_type] = state_value
+                # st.dataframe(df_db_inf[['State type', 'Value']])    
+            # step = 3
+            # for idx_row in range(0, len(patient_full_name_list), step):
+            #     cols = st.columns(step)
+            #     for idx_col, patient_col in enumerate(cols):
+            #         with patient_col:
+            #             if len(patient_full_name_list) <= idx_row+idx_col:
+            #                 continue
+            #             patient_full_name = patient_full_name_list[idx_row+idx_col] 
+            #             st.write(patient_full_name)
+            #             patient_id = list(set(_df[_df['Full name'].eq(patient_full_name)]['ID']))[0]
+            #             st.write(patient_id)
+
+            #             st.write('🌡️ **Patient states:**')
+            #             df_db_inf = self.cds.kb.kb_dec.inference_dec(patient_data[patient_data.ID.eq(patient_id)][['LOINC-NUM', 'Value']])
+            #             df_db_inf['State type'] = df_db_inf.Therapy_Code.apply(lambda x: self.cds.kb.kb_dec.get_states(x))
+            #             df_db_inf['Value'] = df_db_inf.Value.map(self.state_code_to_name)
+            #             # st.dataframe(df_db_inf[['State type', 'Value']])
+            #             for _, row in df_db_inf[['State type', 'Value']].iterrows():
+            #                 st.write(f'{row["State type"]}: {row["Value"]}')
+
+            #             st.write('💊 **Patient treatments:**')
+            #             st.dataframe(df_treatments[df_treatments['ID'].eq(patient_id)], hide_index=True)
+
+            # st.write('States:')
+            # df_db_inf = self.cds.kb.kb_dec.inference_dec(patient_data[['LOINC-NUM', 'Value']])
+            # df_db_inf['State type'] = df_db_inf.Therapy_Code.apply(lambda x: self.cds.kb.kb_dec.get_states(x))
+            # st.dataframe(df_db_inf)
+
+            # st.write('Treatments:')
+            # st.dataframe(df_treatments, hide_index=True)
+
+            # st.metric('Number of patients:', len(patient_data[~patient_data['LOINC-NUM'].eq('Gender')].drop_duplicates('ID')))
+            
+
+            st.write('🌡️ Patient states:')
+            st.dataframe(patient_data[~patient_data['LOINC-NUM'].eq('Gender')].drop_duplicates('ID')[['ID', 'First name', 'Last name'] + list(set(df_db_inf['State type']))], hide_index=True)
         else:
             selected_patient_id = list(set(_df[_df['Full name'].eq(selected_patient)]['ID']))[0]
-            st.write('Treatments:')
+
+            
+            st.write('🌡️ Patient states:')
+            df_db_inf = self.cds.kb.kb_dec.inference_dec(patient_data[patient_data.ID.eq(selected_patient_id)][['LOINC-NUM', 'Value']])
+            df_db_inf['State type'] = df_db_inf.Therapy_Code.apply(lambda x: self.cds.kb.kb_dec.get_states(x))
+            df_db_inf['Value'] = df_db_inf.Value.map(self.state_code_to_name)
+            st.dataframe(df_db_inf[['State type', 'Value']])
+
+            st.write('💊 Patient treatments:')
             st.dataframe(df_treatments[df_treatments['ID'].eq(selected_patient_id)], hide_index=True)
-            st.write('Patient history:')
+
+            st.write('📂 Patient history:')
             st.dataframe(patient_data[
                 ~(patient_data['LOINC-NUM'].eq('Gender')) 
                 & (patient_data['ID'].eq(selected_patient_id))], 
                 hide_index=True)
+            with col_state_display:
+                # st.write('Patient state:')
+                # st.write('[PLACEHOLDER]')
+                pass
 
     def page_tabs(self):
-        tab_retrieve, tab_history, tab_update, tab_delete = st.tabs(["Retrieve", "History", "Update", "Delete"])
+        tab_retrieve, tab_history, tab_update, tab_delete = st.tabs(["⬇️ Retrieve", "🗒️ History", "🖊️ Update", "❌ Delete"])
 
         with tab_retrieve:
             self.page_retrieve()
