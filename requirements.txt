@@ -1,1 +1,1 @@
-python -m pip install openpyxl
+python pip install openpyxl
