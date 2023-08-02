@@ -82,12 +82,20 @@ class DSS_Engine:
         new_trans = pd.to_datetime(f'{trans_date} {trans_time}')
         if len(selected_row) == 0:
             return -1, -1
-        
-        new_row = pd.Series([selected_row['ID'].values[0], first_name, last_name, loinc, new_value,
-                             selected_row['Unit'].values[0], new_trans, selected_row['Valid start time'].values[0],
-                             selected_row['Valid stop time'].values[0],
-                             selected_row['Transaction stop time'].values[0]], index=self.db.columns)
-        self.db = self.db.append(new_row, ignore_index=True)
+
+        new_row = pd.DataFrame([{
+            'ID':selected_row['ID'].values[0],
+            'First name':first_name,	
+            'Last name':last_name, 	
+            'LOINC-NUM':loinc,
+         	'Value':new_value,	
+            'Unit':selected_row['Unit'].values[0],	
+            'Transaction time':new_trans,	
+            'Valid start time':selected_row['Valid start time'].values[0],	
+            'Valid stop time':selected_row['Valid stop time'].values[0],	
+            'Transaction stop time':selected_row['Transaction stop time'].values[0],
+            }])
+        self.db = pd.concat([self.db, new_row], ignore_index=True)
         self.save_db = True
         return selected_row, new_row
 
@@ -190,11 +198,11 @@ if __name__ == '__main__':
     #                      to_date='2018-5-22',
     #                      trans_date='2018-5-23', trans_time='18:00')
 
-    # dss.update(loinc='30313-1',
-    #            first_name='Avraham',
-    #            last_name='Avraham',
-    #            trans_date='2018-5-25', trans_time='15:00',
-    #            component_date='2018-5-23', component_time='15:00', new_value=15.5)
+    dss.update(loinc='30313-1',
+               first_name='Avraham',
+               last_name='Avraham',
+               trans_date='2018-5-25', trans_time='15:00',
+               component_date='2018-5-23', component_time='15:00', new_value=15.5)
 
     # dss.delete(loinc='14743-9',
     #            first_name='Yonathan',
