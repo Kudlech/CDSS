@@ -1,1 +1,2 @@
-pip install openpyxl
+/home/adminuser/venv/bin/python -m pip install --upgrade pip
+/home/adminuser/venv/bin/python -m pip install openpyxl
