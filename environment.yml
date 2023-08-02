@@ -1,0 +1,6 @@
+name: CDSS
+dependencies:
+  - numpy
+  - pandas
+  - streamlit
+  - openpyxl
