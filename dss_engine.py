@@ -7,7 +7,10 @@ class DSS_Engine:
         self.db = db
         self.save_db = False
         self.kb = KB('kb_dec.xlsx', 'kb_proc.xlsx')
-        self.db.insert(4,'LOINC-NAME', self.db['LOINC-NUM'].map(dict(self.kb.kb_dec.get_full_loinc_desc().values)))
+        # try:
+        #     self.db.insert(4,'LOINC-NAME', self.db['LOINC-NUM'].map(dict(self.kb.kb_dec.get_full_loinc_desc().values)))
+        # except:
+        #     self.db['LOINC-NAME'] = self.db['LOINC-NUM'].map(dict(self.kb.kb_dec.get_full_loinc_desc().values))
 
 
     def retrieval(self, loinc, first_name, last_name, current_date, current_time, component_date, component_time=None):
@@ -162,40 +165,41 @@ class DSS_Engine:
         return 'No Changes to Save!'
 
 
-db_path = 'project_db_updated.csv'
-df = pd.read_csv(db_path,
-                 parse_dates=['Valid start time', 'Valid stop time', 'Transaction time', 'Transaction stop time'])
-dss = DSS_Engine(db=df)
+if __name__ == '__main__':
+    db_path = 'project_db_updated.csv'
+    df = pd.read_csv(db_path,
+                    parse_dates=['Valid start time', 'Valid stop time', 'Transaction time', 'Transaction stop time'])
+    dss = DSS_Engine(db=df)
 
-# # pat_df = dss.get_patient_data()
-#
-# a = dss.get_states(trans_date='2018-5-22', trans_time='11:30')
-#
-# print(a)
+    # # pat_df = dss.get_patient_data()
+    #
+    # a = dss.get_states(trans_date='2018-5-22', trans_time='11:30')
+    #
+    # print(a)
 
-# dss.retrieval(loinc='30313-1',
-#               first_name='Avraham',
-#               last_name='Avraham',
-#               current_date='2018-5-22', current_time='11:00',
-#               component_date='2018-5-21', component_time='15:00')
+    # dss.retrieval(loinc='30313-1',
+    #               first_name='Avraham',
+    #               last_name='Avraham',
+    #               current_date='2018-5-22', current_time='11:00',
+    #               component_date='2018-5-21', component_time='15:00')
 
-# dss.history_retrival(loinc='30313-1',
-#                      first_name='Avraham',
-#                      last_name='Avraham',
-#                      from_date='2018-5-21', from_time='9:00',
-#                      to_date='2018-5-22',
-#                      trans_date='2018-5-23', trans_time='18:00')
+    # dss.history_retrival(loinc='30313-1',
+    #                      first_name='Avraham',
+    #                      last_name='Avraham',
+    #                      from_date='2018-5-21', from_time='9:00',
+    #                      to_date='2018-5-22',
+    #                      trans_date='2018-5-23', trans_time='18:00')
 
-# dss.update(loinc='30313-1',
-#            first_name='Avraham',
-#            last_name='Avraham',
-#            trans_date='2018-5-25', trans_time='15:00',
-#            component_date='2018-5-23', component_time='15:00', new_value=15.5)
+    # dss.update(loinc='30313-1',
+    #            first_name='Avraham',
+    #            last_name='Avraham',
+    #            trans_date='2018-5-25', trans_time='15:00',
+    #            component_date='2018-5-23', component_time='15:00', new_value=15.5)
 
-# dss.delete(loinc='14743-9',
-#            first_name='Yonathan',
-#            last_name='Spoon',
-#            trans_date='2018-6-30', trans_time='11:00',
-#            component_date='2018-5-17', component_time='19:00')
+    # dss.delete(loinc='14743-9',
+    #            first_name='Yonathan',
+    #            last_name='Spoon',
+    #            trans_date='2018-6-30', trans_time='11:00',
+    #            component_date='2018-5-17', component_time='19:00')
 
-dss.save(db_path)
+    dss.save(db_path)
