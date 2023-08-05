@@ -9,3 +9,5 @@ cd CDSS
 pip install streamlit
 streamlit run ui.py
 ```
+
+![image](https://github.com/Kudlech/CDSS/assets/23153756/77241d02-115a-42cc-b7ac-59d12b10fe41) 
