@@ -22,7 +22,7 @@ class DSS_Engine:
         target_date = pd.to_datetime(component_date).date()  # Convert target date to date format
         conditions = (self.db['First name'] == first_name) & (self.db['Last name'] == last_name) & \
                      (self.db['LOINC-NUM'] == loinc) & (self.db['Valid start time'].dt.date == target_date) & \
-                     (self.db['Transaction time'] < physician_date)
+                     (self.db['Transaction time'] <= physician_date)
 
         filtered_df = self.db[conditions]
         filtered_df = self.filter_deleted_rows(filtered_df, current_date, current_time)
@@ -68,7 +68,7 @@ class DSS_Engine:
             selected_row = self.filter_best_before(selected_row, trans_date, current_time)
         return selected_row
 
-    def update(self, loinc, first_name, last_name, trans_date, trans_time, component_date, component_time, new_value):
+    def update(self, loinc, first_name, last_name, trans_date, trans_time, component_date, component_time, new_value, only_preview_selected_row=False):
         # Filter according to the conditions
         target_date = pd.to_datetime(f'{component_date} {component_time}')
         conditions = (self.db['First name'] == first_name) & (self.db['Last name'] == last_name) & \
@@ -82,6 +82,9 @@ class DSS_Engine:
         new_trans = pd.to_datetime(f'{trans_date} {trans_time}')
         if len(selected_row) == 0:
             return -1, -1
+        
+        if only_preview_selected_row:
+            return selected_row, -1
 
         new_row = pd.DataFrame([{
             'ID':selected_row['ID'].values[0],
@@ -99,13 +102,15 @@ class DSS_Engine:
         self.save_db = True
         return selected_row, new_row
 
-    def delete(self, loinc, first_name, last_name, trans_date, trans_time, component_date, component_time):
+    def delete(self, loinc, first_name, last_name, trans_date, trans_time, component_date, component_time, only_preview_selected_row=False):
         # Add 'Transaction Stop Time' When the there is a deletion
         target_date = pd.to_datetime(component_date).date()  # Convert target date to date format
         conditions = (self.db['First name'] == first_name) & (self.db['Last name'] == last_name) & \
                      (self.db['LOINC-NUM'] == loinc) & (self.db['Valid start time'].dt.date == target_date)
 
         filtered_df = self.db[conditions]
+        filtered_df = self.filter_deleted_rows(filtered_df, trans_date, trans_time)
+
 
         # Check if the time of the component also provided
         if component_time:
@@ -116,12 +121,15 @@ class DSS_Engine:
         
         if len(selected_row) == 0:
             return -1
+        
+        if only_preview_selected_row:
+            return selected_row
 
         trans_stop_date = pd.to_datetime(f'{trans_date} {trans_time}')  # Convert trans stop date to date format
         self.db.at[selected_row.index[0], 'Transaction stop time'] = trans_stop_date
         self.save_db = True
 
-        return selected_row
+        return selected_row.loc[selected_row.index[0]]
 
     @staticmethod
     def filter_deleted_rows(data, trans_date, trans_time):
@@ -178,6 +186,7 @@ if __name__ == '__main__':
     df = pd.read_csv(db_path,
                     parse_dates=['Valid start time', 'Valid stop time', 'Transaction time', 'Transaction stop time'])
     dss = DSS_Engine(db=df)
+
 
     # # pat_df = dss.get_patient_data()
     #
