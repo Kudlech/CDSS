@@ -103,21 +103,21 @@ class UI():
             with col_state_display:
                 st.metric('**Total number of patients:**', len(set(df_states['ID'])))
 
-            state_names = list(set(df_db_inf['State type']))
-            state_names.sort()
-            max_number_of_unique_state_values = 1
-            for state_type in state_names:
-                number_of_state_values = len(set(df_states[state_type].value_counts().keys()))
-                max_number_of_unique_state_values = max(max_number_of_unique_state_values, number_of_state_values)
+            # state_names = list(set(df_db_inf['State type']))
+            # state_names.sort()
+            # max_number_of_unique_state_values = 1
+            # for state_type in state_names:
+            #     number_of_state_values = len(set(df_states[state_type].value_counts().keys()))
+            #     max_number_of_unique_state_values = max(max_number_of_unique_state_values, number_of_state_values)
 
-            for state_type in state_names:
-                df_state_value_counts = df_states[state_type].value_counts()
-                df_state_value_counts_keys = list(set(df_state_value_counts.keys()))
-                df_state_value_counts_keys.sort()
-                cols_ = st.columns(max_number_of_unique_state_values)
-                for k_col, k in zip(cols_, df_state_value_counts_keys):      
-                    with k_col:
-                        st.metric(f'**{state_type}**  \n  *{k}*', df_state_value_counts[k])
+            # for state_type in state_names:
+            #     df_state_value_counts = df_states[state_type].value_counts()
+            #     df_state_value_counts_keys = list(set(df_state_value_counts.keys()))
+            #     df_state_value_counts_keys.sort()
+            #     cols_ = st.columns(max_number_of_unique_state_values)
+            #     for k_col, k in zip(cols_, df_state_value_counts_keys):      
+            #         with k_col:
+            #             st.metric(f'**{state_type}**  \n  *{k}*', df_state_value_counts[k])
             
             st.dataframe(df_states, hide_index=True)
         else:
