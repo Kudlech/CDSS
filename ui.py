@@ -482,7 +482,7 @@ class UI():
             else:
                 self.cds.save(self.db_path)
                 st.write('Deleted row:')
-                st.dataframe(selected_row, hide_index=True)
+                st.dataframe(selected_row.to_frame().transpose(), hide_index=True)
                 st.success('Deleted data successfully', icon="❌")
                 
         
